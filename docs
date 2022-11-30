@@ -1,0 +1,30 @@
+warehouse class
+bemenetei: boltok eloszlása, adott napi maradék
+kimenet: összesen mennyit rendeljen t+4re
+probléma: A boltok eloszlását csak magában megrendelni nem elég, mivel a boltok eloszlása az eladásra vonatkozik, nem a megrendelendő áru mennyiségére
+ágens errorja: warehouseban maradó áruk száma, warehouseban lévő, a boltok által nem megrendelt áruk száma, a kettő súlyozásával lehet játszani
+teszt: mondjuk 7 napig jó az adott áru
+t0: a bolt berendel az eloszlás várható értéke alapján, húzunk az eloszlásból, pontosan mennyi fogy el
+t1: a bolt berendel a várható érték – maradék alapján
+t2: same
+t3: same, de nekünk ezt a napot kell előre megbecsülnünk, mivel ekkorra rendel a warehouse
+megnézzük, mennyivel tér el az előre megrendelt áru a warehosueban tárolttól
+A warehouseban maradhat áru?
+Ha igen, a boltokhoz hasonló rendszert kell arra is írni
+vásárlói szokások????
+vagy a friss árut veszik, vagy a majdnem lejártat (probably akciós áron), remélem az akciós árat nem kell nekünk becsülnünk
+1 nap:
+warehouse:
+	storage van, lejarat van
+	kiküldi, updatel, rendel
+bolt:
+	storage lista, lejárattal
+	megkapja a t-1 ordert
+	updatel	: megvasarolt
+	vásárlás
+	updatel
+	rendel t+1re
+error:
+	kidobott áru, nem megvett áru
+	storage+megrendelt-vasarolt
+	nap végén milyen a legöregebb termék
