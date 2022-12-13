@@ -1,21 +1,25 @@
-# LIDL_ML_Project
+#Warehouse előrejelző dokumentációja
 
-# Warehouse előrejelző dokumentációja
-
+##A program célja
 A program célja a warehouseban lévő storage menedzselése, a rendelés mennyiségének t+4 napra prediktálása.
 
-Szükséges bemenetei a boltok eloszlásai, valamint az adott nap végén a boltokban maradt áru száma. Ezen adatok ismeretében előrejelzést ad arra vonatkozólag, mennyi árura lesz szükség a boltokban 4 nap múlva.
+##A környezet
+A megerősítő tanulás ágense számára létrehoztunk egy környezetet, melyben egy központi raktár, és az alá tartozó boltok találhatóak. A raktár célja, hogy minden nap elég áru legyen, hogy a boltok rendeléseit kielégíthesse. A boltok minden nap a másnapi fogyás várható értékére egészítik ki saját árukészletüket.
 
-A  boltokban a raktárkészletet egy vektor tartja számon, melyben lejárat szerint tároljuk az áru mennyiségét, az újonnan érkező áru tehát balról shiftelődik be minden nap.
+##A környezet pontos felépítése
+A warehouseban egy vektorban táruljuk a rendelt áru mennyiségét, ezzel szimulálva az időbeli eltolódást a boltok és a raktár között. A vektorba minden nap bekerül a warehouse által rendelt mennyiség, valamint kiosztásra kerül a boltok között a négy nappal ezelőtt rendelt összes áru. A boltokban az árut szintén vektorokban tároljuk, ahol az indexek az áru korát (hány napja érkezett a boltba) jelzik.
 
-A központi raktárban jelen pillanatban csak az adott áru mennyiségét tartjuk számon, lejáratát nem.
+##Tesztelés
+A tesztelés során a boltok eloszlásából húzunk, majd nap végén az adott bolt a másnapi várható fogyasztás értére próbálja meg kiegészíteni saját árukészletét. Ezt a rendelést továbbíta a központi raktár felé, ahol ennek függvényében szétosztásra kerül a korábban az adott napra megrendelt összes áru, a boltok rendelésének nagyságával arányosan. A warehouse a nap végén rendel, az általa rendelt áru csak négy nap múlva kerül a boltokba kiszállításra.
 
-A tesztelés során a boltok eloszlásából húzunk, majd nap végén az adott bolt a másnapi várható értékre egészíti ki a saját raktárában lévő árukat. Ezután ezt a rendelést visszaküldi a központi raktárnak, amely megpróbálja pontosan a kért árumennyiséget biztosítani minden bolt számára. Amennyiben ez nem lehetséges, mivel a raktárban nincs erre elegendő áru, a raktár a rendelések mennyiségével arányosan osztja szét az összes árut a boltok között.
+##Hiba 
+A hibát a boltokban maradó áru kora jeletni, valamint azon áru mennyisége, melyet meg szerettek volna venni a vásárlók (az eloszlából húzott érték alapján), ám nem volt lehetőségük, mivel a boltban nem volt elég mennyiségű áru. A két hibát egymástól függetlenül kezeljük, így súlyuk szabadon változtatható.
 
-Az ágens hibáját a boltokban maradt, lejárt szavatosságú áru és a vevők által megvásárolni kívánt, de nem tudott (mivel a boltnak nem volt áruja készleten) áru mennyisége jelenti.
+##Predikció
+A warehouse rendelésének optimalizálása a fő cél. A predikcióhoz szükséges bemenő paraméterek a boltok várható eloszlásai négy nap múlva, valamint a boltok adott pillanatbeli árukészletei. A modell célje ezen inputok segítségével az optimális rendelendő mennyiség prediktálása.
 
-A vásárló szokások jelen pillanatban úgy működnek, hogy a vásárló mindig a legfrissebb árut kívánja megvenni.
-
-A jövőben szeretnénk megvalósítani, hogy a boltokon túl a warehouseban is vektorosan tároljuk a raktárkészletet.
-
-Mivel a program nem konkrét lejárati dátumot tart számon, hanem azt, hogy az áru hány napja van a boltban, ezért könnyen paraméterezhető, hány nap után tekintjük az árut nem eladhatónak.
+##További célok
+###Vásárlói szokások
+Jelen pillanatban a vásárlói szokások abban nyilvánulnak meg, hogy mindig a legfrissebb árut szeretnék megvásárolni, ám később szeretnénk beépíteni, hogy lehetőség legyen ettől eltérő szokásokkal való tesztelére is.
+###Lejárati idő
+Mivel a boltokban napra pontosan tároljuk, mikor érekezett a termék, így hozzá lehet rendelni minden termékhez egy dátumot, mely után az adott termék mát nem kerülhet eladásra. Ezen termékek számát természetesen a hiba számolásába is be kell építeni.
