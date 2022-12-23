@@ -23,3 +23,6 @@ A warehouse rendelésének optimalizálása a fő cél. A predikcióhoz szüksé
 Jelen pillanatban a vásárlói szokások abban nyilvánulnak meg, hogy mindig a legfrissebb árut szeretnék megvásárolni, ám később szeretnénk beépíteni, hogy lehetőség legyen ettől eltérő szokásokkal való tesztelére is.
 ### Lejárati idő
 Mivel a boltokban napra pontosan tároljuk, mikor érekezett a termék, így hozzá lehet rendelni minden termékhez egy dátumot, mely után az adott termék mát nem kerülhet eladásra. Ezen termékek számát természetesen a hiba számolásába is be kell építeni.
+
+## Lehetséges egyéb változtatások
+A mostani programban a központi raktár minden esetben kiosztja a nála lévő árut, így a boltok általában nem pontosan annyit kapnak, mint amennyit rendeltek. Ezzel ellentétben megvalósítható, hogy a "maradék", rendeléseken felüli áru nem kerül a boltokban kiszállításra, hanem a warehouseban marad, és a következő rendelésekkor ez az áru is kiosztásra kerül. Ebben az esetben viszont fel kell állítani valamiféle fontossági sorrendet a boltok között, hogy melyik üzlet kapja a firssebb árut.
