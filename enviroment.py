@@ -4,7 +4,6 @@ import gymnasium as gym
 from gymnasium import spaces
 import math as m
 
-
 class WarehouseEnv(gym.Env):
 
     def __init__(self, max_age=7, n_days=1000):
@@ -12,18 +11,23 @@ class WarehouseEnv(gym.Env):
         self.stores = []
         self.max_age = max_age
         self.n_days = n_days
-        self.storage = np.zeros(self.max_age + 4)  
+        self.storage = np.zeros(self.max_age + 4)
+        
         self.maxorder = 0
+        self.state_size = 0
 
     def setup_spaces(self):
         """ 
         Initialize observation and action spaces
         to mach Store paramters.
         """
-        
-        #give upper bound for the Warehouse orders
+        # give upper bound for the Warehouse orders
+        # calculate state size
         for store in self.stores:
             self.maxorder += max(store.avg_range) * 3
+            self.state_size += store.max_age + 1
+        self.state_size += self.max_age + 1
+        print(f"State size: {self.state_size}")
             
         self.observation_space = spaces.Dict(
             {
@@ -52,7 +56,6 @@ class WarehouseEnv(gym.Env):
         wh_info = self.storage
 
         return {"store_info": store, "warehouse_info": wh_info}
-
 
     def step(self, action):
         """ 
@@ -100,28 +103,38 @@ class WarehouseEnv(gym.Env):
                     break
         
         # give out orders to the Stores, calculate rewards
+        expired = 0
+        observation = []
+        # print(order_builder)
         for i, store in enumerate(self.stores):
             store.one_day(order_builder[i])
+            
             reward -= store.expired * 100
             reward += 15 * sum(store.storage) - store.min_items
             reward -= sum(store.storage * (np.arange(len(store.storage))+1)) #the older the item the more -points it gets
+            
+            observation.extend(store.storage)
+            observation.append(sum(order_builder[i]))
+            expired += store.expired
 
-        # TODO: remove sphagetti
-
+        observation.extend(self.storage[4:])
+        observation.append(expired)
+        print(observation,self.storage)
+        
         # * PREPARATIONS
         reward -= 100 * self.storage[-1]
         self.storage = np.roll(self.storage, 1)
         self.daycount += 1
         self.storage[0] = action
         #(observation, reward, done, info)
-        observation = self._get_obs
+        #observation = self._get_obs
         return observation, reward, self.daycount == self.n_days, None
 
     def addStore(self, store):
         """
         Connect new store to the Warehouse
         """
-        self.storage += store.avg
+        #self.storage += store.avg
         self.stores.append(store)
 
     def reset(self):
@@ -182,7 +195,6 @@ class Store():
         # get daily demand amount from distribution
         
         bought_amount = self.get_sold_amount()
-
         # rolling subtraction of demand from storage
         for index in range(self.max_age):
             bought_amount -= self.storage[index]
@@ -231,16 +243,18 @@ if __name__ == '__main__':
     w.addStore(Store(
         avg_range=[8],
         std_range=[5],
-        max_age=5)) 
-    w.addStore(Store(
-        avg_range=[13],
-        std_range=[5],
-        max_age=5))
-    w.addStore(Store(
-        avg_range=[20],
-        std_range=[5],
-        max_age=5))
+        max_age=6)) 
+    # w.addStore(Store(
+    #     avg_range=[13],
+    #     std_range=[5],
+    #     max_age=6))
+    # w.addStore(Store(
+    #     avg_range=[20],
+    #     std_range=[5],
+    #     max_age=6))
     w.setup_spaces()
-    print(w.observation_space.sample())
-    print(w.action_space.sample())
+    # print(w.observation_space.sample())
+    # print(w.action_space.sample())
     print(w.maxorder)
+    import random
+    [w.step(24) for _ in range(100)]

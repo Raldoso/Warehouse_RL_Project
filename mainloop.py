@@ -26,19 +26,32 @@ env.addStore(
         avg_range=[20],
         std_range=[5],
         max_age=5))
-env.setup_spaces()
+#env.setup_spaces()
 
 """ 
 SETUP AGENT
 """
-agent = Agent(...)
+agent = Agent(
+    state_size=env.state_size,
+    action_size=env.maxorder,
+    learn_rate=     0.001,
+    gamma=          0.99,
+    epsilon_decay=  0.996,
+    epsilon_min=    0.01,
+    temperature=    5,#not important atm
+    batch_size=     6,
+    memory_size=    100,
+    target_update_rate=50,
+)
 
 """ 
 HISTORY
 """
 scores = []
 
-
+""" 
+LOOP
+"""
 for episode in range(NUM_EPISODES):
     score = 0
     done = False
@@ -58,8 +71,8 @@ for episode in range(NUM_EPISODES):
 
         #use the cumulated reward as an overall score for this episode
         score += reward
-        
-        agent.memory.add_transition(state, action, reward, next_state)
+
+        agent.memory.add_transition(transition=(state, action, reward, next_state))
         
         # We pass batches of observations to the agent
         # so we need at least one batch amount of observations
@@ -72,7 +85,6 @@ for episode in range(NUM_EPISODES):
     if episode % 100 == 0:
         # Print out performance after every 100 episodes
         print(f"Episode: {episode}, Score: {score} , Avg Score: {np.mean(scores[-100:])}")
-
 
 # Save the model at the and of training to reuse later
 agent.save_model()

@@ -28,49 +28,61 @@ class StateMemory():
     def __init__(self,capacity,batch_size):
         self.capacity = capacity
         self.batch_size = batch_size
-        self.memory = deque(maxlen=capacity)
+        self.memory = []
 
-    def add_transition(self,state,action,reward,next_state):
+    def add_transition(self,transition):
         # save new transition
         # delete old transition if full to keep fixed capacity
         if len(self) >= self.capacity:
-            self.memory.popleft()
-        self.memory.append((state,action,reward,next_state))
+            self.memory.pop(0)
+        self.memory.append(transition)
         
     def sample(self):
         # return 1 batch of transitions
-        ...
+        start_index = np.random.randint(0,len(self)-self.batch_size+1)
+        return self.memory[start_index:start_index+self.batch_size]
+
     def __len__(self):
         return len(self.memory)
-
-        
+   
 class Agent():
     def __init__(self,
                  state_size,
                  action_size,
                  learn_rate,
                  gamma,
-                 epsilon,
+                 epsilon_decay,
+                 epsilon_min,
                  temperature,
                  batch_size,
                  memory_size,
+                 target_update_rate,
                 ):
+        # ENVIROMENT PARAMETERS
         self.state_size = state_size
         self.action_size = action_size
+
+        # NETWORK LEARNING PARAMETERS
         self.learn_rate = learn_rate
         self.gamma = gamma
-        self.epsilon = epsilon
+        self.epsilon = 1
+        self.epsilon_decay = epsilon_decay
+        self.epsilon_min = epsilon_min
         self.temperature = temperature
+        self.target_update_rate = target_update_rate
+
+        # MEMORY PARAMETERS
         self.batch_size = batch_size
         self.memory_size = memory_size
+        self.memory = StateMemory(self.memory_size,self.batch_size)
         
+        self.step = 0
         self.Q_policy = QNetwork(state_size,action_size,self.learn_rate)
         self.Q_target = QNetwork(state_size,action_size,self.learn_rate)
         
-        self.memory = StateMemory(self.memory_size,self.batch_size)
     
     def choose_action(self,state):
-        rnd = torch.rand()
+        rnd = np.random.random()
         q_values = self.Q_policy(state)
         if rnd < 1 - self.epsilon:
             action = torch.argmax(q_values).item()
@@ -82,5 +94,66 @@ class Agent():
         torch.save(self.Q_policy.state_dict(), "warehouse_agent.pth")
 
     def update(self):
+        self.Q_policy.optimizer.zero_grad()
         
-        ...
+        state_batch = np.array(self.memory.sample(),dtype=object)
+
+        # data from batch
+        states = torch.Tensor(list(state_batch[:,0]))
+        next_states = torch.Tensor(list(state_batch[:,3]))
+        rewards = torch.Tensor(list(state_batch[:,2]))
+
+        # pass through network
+        Q_values = self.Q_policy(states).to(self.Q_policy.device)
+        Q_next_values = self.Q_target(next_states).to(self.Q_policy.device)
+        
+        # loss calculation
+        max_q_indexes = torch.argmax(Q_values,dim=1).to(self.Q_policy.device)
+        
+        Q_targets = Q_values.clone()
+        Q_targets[np.arange(self.batch_size),max_q_indexes] = rewards + self.gamma*torch.max(Q_next_values[1])
+        
+        loss = self.Q_policy.loss(Q_targets,Q_values).to(self.Q_policy.device)
+        loss.backward()
+        self.Q_policy.optimizer.step()
+        
+        # network paramters update
+        if self.step % self.target_update_rate == 0:
+            print("Copy target network")
+            self.Q_target.load_state_dict(self.Q_policy.state_dict())
+        self.epsilon = max(self.epsilon*self.epsilon_decay, self.epsilon_min)
+        self.step += 1
+        
+     
+if __name__ == "__main__":
+            
+    # x = np.array([[[4,10,24],2,3,1],[[1,4,1],4,7,8]],dtype=object)
+    # x = list(x[:,0])
+    # x = torch.Tensor(x)
+    # print(x)
+
+    # x = x.view(-1)
+    # print(x)
+
+    # x = [[[4,10,24],2,3,1],[[1,4,1],4,7,8]]
+    # x = torch.Tensor(list(np.array(x)[:,0])).view(-1)
+    # # x = np.vstack(x).astype(np.float32)
+    # x = list(x)
+    # print(x)
+    # torch.seed(2)
+    # print(torch.Tensor(x).view(-1))
+    torch.manual_seed(2)
+
+    inp = torch.Tensor([[2,3],[7,6]])
+
+    model = nn.Linear(2,4)
+    x = model.forward(torch.Tensor(inp))
+    print(x)
+    print(torch.argmax(x,dim=1))
+    
+    x = np.array([1,3,1])
+    y = []
+    y.extend(x)
+    print(y)
+    
+    
