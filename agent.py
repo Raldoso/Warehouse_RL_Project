@@ -99,9 +99,9 @@ class Agent():
         state_batch = np.array(self.memory.sample(),dtype=object)
 
         # data from batch
-        states = torch.Tensor(list(state_batch[:,0]))
-        next_states = torch.Tensor(list(state_batch[:,3]))
-        rewards = torch.Tensor(list(state_batch[:,2]))
+        states = torch.Tensor(list(state_batch[:,0])).to(self.Q_policy.device)
+        next_states = torch.Tensor(list(state_batch[:,3])).to(self.Q_policy.device)
+        rewards = torch.Tensor(list(state_batch[:,2])).to(self.Q_policy.device)
 
         # pass through network
         Q_values = self.Q_policy(states).to(self.Q_policy.device)
@@ -110,6 +110,7 @@ class Agent():
         # loss calculation
         max_q_indexes = torch.argmax(Q_values,dim=1).to(self.Q_policy.device)
         
+        # BELLMANN-EQUATION
         Q_targets = Q_values.clone()
         Q_targets[np.arange(self.batch_size),max_q_indexes] = rewards + self.gamma*torch.max(Q_next_values[1])
         
@@ -119,7 +120,7 @@ class Agent():
         
         # network paramters update
         if self.step % self.target_update_rate == 0:
-            print("Copy target network")
+            # print("Copy target network")
             self.Q_target.load_state_dict(self.Q_policy.state_dict())
         self.epsilon = max(self.epsilon*self.epsilon_decay, self.epsilon_min)
         self.step += 1

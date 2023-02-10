@@ -2,8 +2,6 @@ from enviroment import WarehouseEnv, Store
 from agent import Agent
 import numpy as np
 
-NUM_EPISODES = 10000
-
 """ 
 SETUP ENVIROMENT
 """
@@ -15,22 +13,24 @@ env.addStore(
     Store(
         avg_range=[8],
         std_range=[5],
-        max_age=5)) 
+        max_age=6)) 
 env.addStore(
     Store(
         avg_range=[13],
         std_range=[5],
-        max_age=5))
+        max_age=6))
 env.addStore(
     Store(
         avg_range=[20],
         std_range=[5],
-        max_age=5))
-#env.setup_spaces()
+        max_age=6))
+env.setup_spaces()
 
 """ 
 SETUP AGENT
 """
+NUM_EPISODES = 300
+scores = []
 agent = Agent(
     state_size=env.state_size,
     action_size=env.maxorder,
@@ -43,12 +43,6 @@ agent = Agent(
     memory_size=    100,
     target_update_rate=50,
 )
-
-""" 
-HISTORY
-"""
-scores = []
-
 """ 
 LOOP
 """
@@ -56,7 +50,8 @@ for episode in range(NUM_EPISODES):
     score = 0
     done = False
     state = env.reset()
-
+    step = 0
+    error = False
     while not done:
         """ 
         1. Choose action
@@ -65,10 +60,11 @@ for episode in range(NUM_EPISODES):
         4. Save observation and reward
         5. Update Agent network
         """
-        
+        # print(step)
         action = agent.choose_action(state)
-        next_state, reward, done, _ = env.step(action)
+        next_state, reward, done, error = env.step(action)
 
+        if error:break
         #use the cumulated reward as an overall score for this episode
         score += reward
 
@@ -80,12 +76,22 @@ for episode in range(NUM_EPISODES):
             agent.update()
         
         state = next_state
-        
+        step +=1
+    
+    if error:break
     scores.append(score)
-    if episode % 100 == 0:
+    # if episode % 100 == 0:
         # Print out performance after every 100 episodes
-        print(f"Episode: {episode}, Score: {score} , Avg Score: {np.mean(scores[-100:])}")
-
+    print(f"Episode: {episode}, Score: {score} , Avg Score: {int(np.mean(scores[-100:]))}")
+        
+with open('scores.txt', 'w') as f:
+    f.write(",\n".join(map(str, scores)))
 # Save the model at the and of training to reuse later
 agent.save_model()
+
+scores = scores[5:]
+
+import matplotlib.pyplot as plt
+plt.plot(np.arange(len(scores)),scores)
+plt.show()
 

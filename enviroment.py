@@ -4,14 +4,17 @@ import gymnasium as gym
 from gymnasium import spaces
 import math as m
 
-class WarehouseEnv(gym.Env):
+class WarehouseEnv():
 
-    def __init__(self, max_age=7, n_days=1000):
+    def __init__(self, max_age=7, n_days=500):
         self.daycount = 0
         self.stores = []
         self.max_age = max_age
         self.n_days = n_days
         self.storage = np.zeros(self.max_age + 4)
+        
+        #! error for debugging
+        self.error = False
         
         self.maxorder = 0
         self.state_size = 0
@@ -27,26 +30,27 @@ class WarehouseEnv(gym.Env):
             self.maxorder += max(store.avg_range) * 3
             self.state_size += store.max_age + 1
         self.state_size += self.max_age + 1
-        print(f"State size: {self.state_size}")
-            
-        self.observation_space = spaces.Dict(
-            {
-                #store info
-                # a matrix sized (2, numStores)
-                # first row is the sum if items in the store
-                #2nd row it the last recieved amount if items in the store
+            # print(f"State size: {self.state_size}")
+                
+            # self.observation_space = spaces.Dict(
+            #     {
+            #         #store info
+            #         # a matrix sized (2, numStores)
+            #         # first row is the sum if items in the store
+            #         #2nd row it the last recieved amount if items in the store
 
-                "store_info":   spaces.Box(low=np.array([0, 0]), high=np.array([200, 100]), dtype=np.int32),
+            #         "store_info":   spaces.Box(low=np.array([0, 0]), high=np.array([200, 100]), dtype=np.int32),
 
-                # TODO calculate store info max
- 
-                #warehouse info
-                #contains 2 values, sum of storage, last ordered amount
+            #         # TODO calculate store info max
+    
+            #         #warehouse info
+            #         #contains 2 values, sum of storage, last ordered amount
 
-                "warehouse_info": spaces.Box(low=0, high=self.maxorder, shape=(self.max_age+4,), dtype=np.int32)
-            })
-        #maximum amount to order
-        self.action_space = spaces.Discrete(self.maxorder+1)
+            #         "warehouse_info": spaces.Box(low=0, high=self.maxorder, shape=(self.max_age+4,), dtype=np.int32)
+            #     })
+            # #maximum amount to order
+            # self.action_space = spaces.Discrete(self.maxorder+1)
+        pass
 
     def _get_obs(self):
         store = np.zeros(2, len(self.stores))
@@ -86,8 +90,17 @@ class WarehouseEnv(gym.Env):
                 break
             else:
                 for i, store in enumerate(self.stores):
-                    
-                    provided = m.floor(self.storage[index + 3] * (store.ordered_amount / order_sum))
+                    try:
+                        provided = m.floor(self.storage[index + 3] * (store.ordered_amount / order_sum))
+                    except Exception as e:
+                        print(e)
+                        print()    
+                        print(self.storage)
+                        print(order_sum)
+                        print(store.ordered_amount)
+                        
+                        self.error = True
+                        break
                     order_builder[i][index] = provided
                     store.ordered_amount -= provided
                     order_sum -= provided
@@ -119,7 +132,7 @@ class WarehouseEnv(gym.Env):
 
         observation.extend(self.storage[4:])
         observation.append(expired)
-        print(observation,self.storage)
+        # print(observation,self.storage)
         
         # * PREPARATIONS
         reward -= 100 * self.storage[-1]
@@ -128,7 +141,7 @@ class WarehouseEnv(gym.Env):
         self.storage[0] = action
         #(observation, reward, done, info)
         #observation = self._get_obs
-        return observation, reward, self.daycount == self.n_days, None
+        return observation, reward, self.daycount == self.n_days, self.error
 
     def addStore(self, store):
         """
@@ -138,11 +151,11 @@ class WarehouseEnv(gym.Env):
         self.stores.append(store)
 
     def reset(self):
+        self.daycount = 0
         self.storage[:] = 0
         for store in self.stores:
             store.reset()
-        return self.observation_space.sample()
-    
+        return [0]*self.state_size
 
 class Store():
     def __init__(self, avg_range, std_range, max_age=6,min_items_percent=0.2):
@@ -193,8 +206,8 @@ class Store():
         """
 
         # get daily demand amount from distribution
-        
         bought_amount = self.get_sold_amount()
+
         # rolling subtraction of demand from storage
         for index in range(self.max_age):
             bought_amount -= self.storage[index]
@@ -204,11 +217,10 @@ class Store():
                 self.storage[index] = (-1) * bought_amount
                 bought_amount = 0
                 break
-
         # get too old items
         # shift storage by one day
         self.expired = self.storage[self.max_age - 1]
-        np.roll(self.storage, 1)
+        self.storage = np.roll(self.storage, 1)
         self.storage[0] = 0
 
         return bought_amount
@@ -225,8 +237,8 @@ class Store():
         reshaped = np.zeros(self.max_age)
         reshaped[:len(received)] = received
         self.recieved = sum(received)
-        
         self.storage += reshaped
+
         # process supply and demand
         self.overbuy = self.update_storage()
         # calculate order for next day
@@ -257,4 +269,4 @@ if __name__ == '__main__':
     # print(w.action_space.sample())
     print(w.maxorder)
     import random
-    [w.step(24) for _ in range(100)]
+    [w.step(7) for _ in range(100)]
