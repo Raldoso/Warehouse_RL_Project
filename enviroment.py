@@ -11,7 +11,7 @@ class WarehouseEnv():
         self.stores = []
         self.max_age = max_age
         self.n_days = n_days
-        self.storage = np.zeros(self.max_age + 4)
+        self.storage = np.zeros(5)
         
         #! error for debugging
         self.error = False
@@ -29,108 +29,37 @@ class WarehouseEnv():
         for store in self.stores:
             self.maxorder += max(store.avg_range) * 3
             self.state_size += store.max_age + 1
-        self.state_size += self.max_age + 1
-            # print(f"State size: {self.state_size}")
-                
-            # self.observation_space = spaces.Dict(
-            #     {
-            #         #store info
-            #         # a matrix sized (2, numStores)
-            #         # first row is the sum if items in the store
-            #         #2nd row it the last recieved amount if items in the store
-
-            #         "store_info":   spaces.Box(low=np.array([0, 0]), high=np.array([200, 100]), dtype=np.int32),
-
-            #         # TODO calculate store info max
-    
-            #         #warehouse info
-            #         #contains 2 values, sum of storage, last ordered amount
-
-            #         "warehouse_info": spaces.Box(low=0, high=self.maxorder, shape=(self.max_age+4,), dtype=np.int32)
-            #     })
-            # #maximum amount to order
-            # self.action_space = spaces.Discrete(self.maxorder+1)
-        pass
-
-    def _get_obs(self):
-        store = np.zeros(2, len(self.stores))
-        for i, store in enumerate(self.stores):
-            store[0][i] = store.storage
-            store[1][i] = store.recieved
-        wh_info = self.storage
-
-        return {"store_info": store, "warehouse_info": wh_info}
+        self.state_size += 1
 
     def step(self, action):
-        """ 
-        - Distribute by category favouring Stores at the beginning of queue.
-        - A category is a group of items with the same age.
-        - Because one Store can get items from multiple categories (it recieves a list)
-        we build up the list with the supplied items for every store before
-        it can be passed to the Stores.
-        """
         reward = 0
 
         # * RECIEVEING AND DISTRIBUTING
-        order_builder = np.zeros(shape=(len(self.stores), self.max_age))
         order_sum = sum([x.ordered_amount for x in self.stores])  # get global order for warehouse
-        index = 0
+        avg_sum = sum([x.avg for x in self.stores])
 
-        """
-        Creating array of items from categories until 
-        Store got what they ordered 
-        or Warehouse goes empty 
-        """
-        while (order_sum > 0 and sum(self.storage) > 0):
-            if self.storage[index + 3] >= order_sum:
-                for i, store in enumerate(self.stores):
-                    order_builder[i][index] = store.ordered_amount
-
-                    self.storage[index + 3] -= store.ordered_amount
-                break
-            else:
-                for i, store in enumerate(self.stores):
-                    try:
-                        provided = m.floor(self.storage[index + 3] * (store.ordered_amount / order_sum))
-                    except Exception as e:
-                        print(e)
-                        print()    
-                        print(self.storage)
-                        print(order_sum)
-                        print(store.ordered_amount)
-                        
-                        self.error = True
-                        break
-                    order_builder[i][index] = provided
-                    store.ordered_amount -= provided
-                    order_sum -= provided
-
-                # this iteration ensures to give out
-                # the whole category and the usage of floor() 
-                # can result in remaining items
-                self.storage[index + 3] = 0
-                
-                #only go to next category if not enough storage
-                index += 1
-                if(index >= self.max_age):
-                    break
-        
         # give out orders to the Stores, calculate rewards
         expired = 0
         observation = []
         # print(order_builder)
         for i, store in enumerate(self.stores):
-            store.one_day(order_builder[i])
+            
+            if order_sum != 0:
+                provided = m.floor(self.storage[4]*(store.ordered_amount/order_sum))
+            else:
+                provided = m.floor(self.storage[4]*(store.avg/avg_sum))
+
+            store.one_day(provided)
             
             reward -= store.expired * 100
             reward += 15 * sum(store.storage) - store.min_items
             reward -= sum(store.storage * (np.arange(len(store.storage))+1)) #the older the item the more -points it gets
             
             observation.extend(store.storage)
-            observation.append(sum(order_builder[i]))
+            observation.append(provided)
             expired += store.expired
 
-        observation.extend(self.storage[4:])
+        #observation.append(self.storage[-1])
         observation.append(expired)
         # print(observation,self.storage)
         
@@ -164,8 +93,8 @@ class Store():
         self.std_range = std_range
         self.max_age = max_age
         
-        self.avg = 0
-        self.std = 0
+        self.avg = avg_range[0]
+        self.std = std_range[0]
         self.overbuy = 0
         self.min_items = 0
         self.min_items_percent = min_items_percent
@@ -175,6 +104,8 @@ class Store():
         self.ordered_amount = self.avg
         self.expired = 0
         self.storage = np.zeros(self.max_age)
+        self.history = np.zeros((0,3)) #recieved,storage,bought ,overbuy, ordered
+
 
     def get_sold_amount(self):
         """
@@ -192,8 +123,8 @@ class Store():
         return max(round(np.random.normal(self.avg, self.std, 1)[0], 0), 0)
 
     def reset(self):
-        self.avg = 0
-        self.std = 0
+        #self.avg = 0
+        #self.std = 0
         self.overbuy = 0
         self.ordered_amount = 0
         self.storage[:] = 0
@@ -219,25 +150,21 @@ class Store():
                 break
         # get too old items
         # shift storage by one day
-        self.expired = self.storage[self.max_age - 1]
+        self.expired = self.storage[-1]
         self.storage = np.roll(self.storage, 1)
         self.storage[0] = 0
 
         return bought_amount
 
-    def one_day(self, received: np.ndarray):
+    def one_day(self, received):
         """
         - simulate one day for the Store
         - recieving supply
         - update storage for the demand of the day
         - place new order
         """
-        #reshaping recieved array, and adding it to storage
 
-        reshaped = np.zeros(self.max_age)
-        reshaped[:len(received)] = received
-        self.recieved = sum(received)
-        self.storage += reshaped
+        self.storage[0] = received
 
         # process supply and demand
         self.overbuy = self.update_storage()
@@ -245,6 +172,7 @@ class Store():
         self.ordered_amount = self.avg - sum(self.storage)
         
         self.ordered_amount = max(self.ordered_amount, 0)
+        self.history = np.append(self.history,np.array([[received,self.overbuy,self.ordered_amount]]),axis=0)
 
 if __name__ == '__main__':
     #testing
@@ -255,18 +183,17 @@ if __name__ == '__main__':
     w.addStore(Store(
         avg_range=[8],
         std_range=[5],
-        max_age=6)) 
-    # w.addStore(Store(
-    #     avg_range=[13],
-    #     std_range=[5],
-    #     max_age=6))
-    # w.addStore(Store(
-    #     avg_range=[20],
-    #     std_range=[5],
-    #     max_age=6))
+        max_age=6))
     w.setup_spaces()
     # print(w.observation_space.sample())
     # print(w.action_space.sample())
     print(w.maxorder)
+    print(w.state_size)
     import random
-    [w.step(7) for _ in range(100)]
+    #[w.step(7) for _ in range(100)]
+    x = np.zeros((0,4))
+    print(x)
+    x = np.append(x,np.array([[1,2,3,4]]),axis=0)
+    x = np.append(x,np.array([[1,2,3,4]]),axis=0)
+    x = np.append(x,np.array([[1,2,3,4]]),axis=0)
+    print(x[:,1])

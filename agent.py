@@ -1,7 +1,7 @@
 import torch
 import torch.nn as nn
 import numpy as np
-from collections import deque
+import os
 
 class QNetwork(nn.Module):
     def __init__(self,state_size,action_size,lr):
@@ -91,7 +91,12 @@ class Agent():
         return action
         
     def save_model(self):
-        torch.save(self.Q_policy.state_dict(), "warehouse_agent.pth")
+        if not os.path.exists('models'):
+            os.mkdir("models")
+        torch.save(self.Q_policy.state_dict(), "models\\warehouse_agent.pth")
+
+    def load_model(self,path):
+        self.Q_policy.load_state_dict(torch.load(path))
 
     def update(self):
         self.Q_policy.optimizer.zero_grad()
@@ -110,7 +115,7 @@ class Agent():
         # loss calculation
         max_q_indexes = torch.argmax(Q_values,dim=1).to(self.Q_policy.device)
         
-        # BELLMANN-EQUATION
+        # (BELLMANN-EQUATION)
         Q_targets = Q_values.clone()
         Q_targets[np.arange(self.batch_size),max_q_indexes] = rewards + self.gamma*torch.max(Q_next_values[1])
         

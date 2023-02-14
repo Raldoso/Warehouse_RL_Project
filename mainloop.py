@@ -26,7 +26,7 @@ env.addStore(
         max_age=6))
 env.setup_spaces()
 
-""" 
+"""
 SETUP AGENT
 """
 NUM_EPISODES = 300
@@ -39,7 +39,7 @@ agent = Agent(
     epsilon_decay=  0.996,
     epsilon_min=    0.01,
     temperature=    5,#not important atm
-    batch_size=     6,
+    batch_size=     3,
     memory_size=    100,
     target_update_rate=50,
 )
@@ -80,18 +80,10 @@ for episode in range(NUM_EPISODES):
     
     if error:break
     scores.append(score)
-    # if episode % 100 == 0:
-        # Print out performance after every 100 episodes
-    print(f"Episode: {episode}, Score: {score} , Avg Score: {int(np.mean(scores[-100:]))}")
+    
+    print(f"Episode: {episode}, Score: {score}")
         
-with open('scores.txt', 'w') as f:
-    f.write(",\n".join(map(str, scores)))
-# Save the model at the and of training to reuse later
+
 agent.save_model()
-
-scores = scores[5:]
-
-import matplotlib.pyplot as plt
-plt.plot(np.arange(len(scores)),scores)
-plt.show()
-
+with open('models\\scores.txt', 'w') as f:
+    f.write(",\n".join(map(str, scores)))
