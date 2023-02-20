@@ -4,6 +4,37 @@ from torch.autograd import Variable
 import numpy as np
 import os
 
+from torch.autograd import Variable
+
+class RQNetwork(nn.Module):
+    def __init__(self,state_size,action_size,lr):
+        self.state_size = state_size
+        super(RQNetwork,self).__init__()
+        
+        self.lstm = nn.LSTM(state_size, state_size)
+        self.fc1 = nn.Linear(state_size,(action_size+action_size)//2)
+        self.fc2 = nn.Linear((action_size+action_size)//2,action_size)
+        self.optimizer = torch.optim.Adam(self.parameters(),lr=lr)
+        self.loss = nn.MSELoss()
+        self.device = torch.device("cuda:0" if torch.cuda.is_available() else "cpu")
+        self.to(self.device)
+
+        self.h_0 = Variable(torch.zeros(1, self.state_size))
+        self.c_0 = Variable(torch.zeros(1, self.state_size))
+        
+    def forward(self,x, learn=False):
+        x = torch.Tensor(x).to(self.device)
+        if learn:
+            self.h_0 = Variable(torch.zeros(1, self.state_size))
+            self.c_0 = Variable(torch.zeros(1, self.state_size))
+
+        output, _ = self.lstm(x, (self.h_0, self.c_0))
+        output = self.fc1(torch.relu(output[-1]))
+        output = self.fc2(torch.relu(output))
+        return output
+    
+
+
 class QNetwork(nn.Module):
     def __init__(self,state_size,action_size,lr):
         super(QNetwork,self).__init__()
@@ -22,6 +53,7 @@ class QNetwork(nn.Module):
         
     def forward(self,x):
         x = torch.Tensor(x).to(self.device)
+
         x = self.linear(x)
         return x
 
