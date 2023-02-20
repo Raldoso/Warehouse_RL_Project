@@ -1,5 +1,6 @@
 from enviroment import WarehouseEnv, Store
 import matplotlib.pyplot as plt
+import matplotlib.gridspec as GridSpec
 from agent import Agent
 import numpy as np
 
@@ -44,17 +45,51 @@ agent = Agent(
     batch_size=     3,
     memory_size=    100,
     target_update_rate=50,
+    policy_save_rate=20,
 )
 
-agent.load_model("models\\warehouse_agent.pth")
+agent.load_model(r"C:\Users\ASUS\Downloads\ItWork\Projects\Udemy_PyML_Bootc\LIDL_ML_Procect\models\480_warehouse_agent.pth")
 state = env.reset()
 for j in range(300):
-    action = agent.choose_action(state)
+    # action = agent.choose_action(state)
+    action = max(0, sum([store.avg for store in env.stores]) - sum([sum(store.storage) for store in env.stores]))
+    
+    
     state, reward, done, error = env.step(action)
     if done:
         break
 
-overbuy = env.stores[0].history[:,0]
-#print(env.stores[0].history)
-plt.plot(range(len(overbuy)), overbuy)
+fig, (ax1, ax2, ax3, ax4, ax5, ax6) = plt.subplots(6, 1,constrained_layout=True)
+
+recieved = env.stores[0].history[:,0]
+storage = env.stores[0].history[:,1]
+bought = env.stores[0].history[:,2]
+overbuy = env.stores[0].history[:,3]
+ordered = env.stores[0].history[:,4]
+expired = env.stores[0].history[:,5]
+
+ax1.plot(recieved,"tab:green")
+ax1.set_title("Recieved")
+ax1.grid()
+
+ax2.plot(storage,"tab:blue")
+ax2.set_title("Sum of storage")
+ax2.grid()
+
+ax3.plot(bought,"tab:grey")
+ax3.set_title("Daily bought amount")
+ax3.grid()
+
+ax4.plot(overbuy,"tab:orange")
+ax4.set_title("Overbuy")
+ax4.grid()
+
+ax5.plot(ordered,"tab:purple")
+ax5.set_title("Ordered amount")
+ax5.grid()
+
+ax6.plot(expired,"tab:red")
+ax6.set_title(" Daily expired items")
+ax6.grid()
+
 plt.show()

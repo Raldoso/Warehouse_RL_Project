@@ -1,5 +1,6 @@
 import torch
 import torch.nn as nn
+from torch.autograd import Variable
 import numpy as np
 import os
 
@@ -57,6 +58,7 @@ class Agent():
                  batch_size,
                  memory_size,
                  target_update_rate,
+                 policy_save_rate,
                 ):
         # ENVIROMENT PARAMETERS
         self.state_size = state_size
@@ -65,11 +67,13 @@ class Agent():
         # NETWORK LEARNING PARAMETERS
         self.learn_rate = learn_rate
         self.gamma = gamma
-        self.epsilon = 1
+        self.epsilon = 1.0
         self.epsilon_decay = epsilon_decay
         self.epsilon_min = epsilon_min
         self.temperature = temperature
         self.target_update_rate = target_update_rate
+        
+        self.policy_save_rate = policy_save_rate
 
         # MEMORY PARAMETERS
         self.batch_size = batch_size
@@ -90,10 +94,10 @@ class Agent():
             action = np.random.choice(np.arange(self.action_size))
         return action
         
-    def save_model(self):
+    def save_model(self,name):
         if not os.path.exists('models'):
             os.mkdir("models")
-        torch.save(self.Q_policy.state_dict(), "models\\warehouse_agent.pth")
+        torch.save(self.Q_policy.state_dict(), f"models\\{name}.pth")
 
     def load_model(self,path):
         self.Q_policy.load_state_dict(torch.load(path))
@@ -123,43 +127,21 @@ class Agent():
         loss.backward()
         self.Q_policy.optimizer.step()
         
-        # network paramters update
+        # network parameters update
         if self.step % self.target_update_rate == 0:
             # print("Copy target network")
             self.Q_target.load_state_dict(self.Q_policy.state_dict())
-        self.epsilon = max(self.epsilon*self.epsilon_decay, self.epsilon_min)
-        self.step += 1
         
-     
+        #self.epsilon = max(self.epsilon*self.epsilon_decay, self.epsilon_min)
+        self.step += 1
 if __name__ == "__main__":
-            
-    # x = np.array([[[4,10,24],2,3,1],[[1,4,1],4,7,8]],dtype=object)
-    # x = list(x[:,0])
-    # x = torch.Tensor(x)
-    # print(x)
-
-    # x = x.view(-1)
-    # print(x)
-
-    # x = [[[4,10,24],2,3,1],[[1,4,1],4,7,8]]
-    # x = torch.Tensor(list(np.array(x)[:,0])).view(-1)
-    # # x = np.vstack(x).astype(np.float32)
-    # x = list(x)
-    # print(x)
-    # torch.seed(2)
-    # print(torch.Tensor(x).view(-1))
-    torch.manual_seed(2)
-
-    inp = torch.Tensor([[2,3],[7,6]])
-
-    model = nn.Linear(2,4)
-    x = model.forward(torch.Tensor(inp))
+    # print(torch.rand(3,1,5))
+    x = torch.rand(3,2)
+    y = torch.rand(3,2)
     print(x)
-    print(torch.argmax(x,dim=1))
-    
-    x = np.array([1,3,1])
-    y = []
-    y.extend(x)
     print(y)
-    
-    
+    # print(y.split(1,dim=1))
+    # [print(i) for i in y.split(1,dim=0)]
+    # print(torch.cat((x,y),dim=1))
+    for i in range(y.size()[0]):
+        print(y[i])

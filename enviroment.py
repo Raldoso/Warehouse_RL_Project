@@ -1,7 +1,4 @@
 import numpy as np
-
-import gymnasium as gym
-from gymnasium import spaces
 import math as m
 
 class WarehouseEnv():
@@ -13,7 +10,6 @@ class WarehouseEnv():
         self.n_days = n_days
         self.storage = np.zeros(5)
         
-        #! error for debugging
         self.error = False
         
         self.maxorder = 0
@@ -41,7 +37,6 @@ class WarehouseEnv():
         # give out orders to the Stores, calculate rewards
         expired = 0
         observation = []
-        # print(order_builder)
         for i, store in enumerate(self.stores):
             
             if order_sum != 0:
@@ -59,17 +54,13 @@ class WarehouseEnv():
             observation.append(provided)
             expired += store.expired
 
-        #observation.append(self.storage[-1])
         observation.append(expired)
-        # print(observation,self.storage)
         
         # * PREPARATIONS
         reward -= 100 * self.storage[-1]
         self.storage = np.roll(self.storage, 1)
         self.daycount += 1
         self.storage[0] = action
-        #(observation, reward, done, info)
-        #observation = self._get_obs
         return observation, reward, self.daycount == self.n_days, self.error
 
     def addStore(self, store):
@@ -104,8 +95,9 @@ class Store():
         self.ordered_amount = self.avg
         self.expired = 0
         self.storage = np.zeros(self.max_age)
-        self.history = np.zeros((0,3)) #recieved,storage,bought ,overbuy, ordered
-
+        
+        self.history = np.zeros((0,6)) #recieved,storage_before,bought ,overbuy, ordered, expired
+        self.record = np.zeros(6)
 
     def get_sold_amount(self):
         """
@@ -130,6 +122,7 @@ class Store():
         self.storage[:] = 0
         self.recieved = 0
         self.expired = 0
+        self.history = np.zeros((0,6))
 
     def update_storage(self):
         """
@@ -138,6 +131,7 @@ class Store():
 
         # get daily demand amount from distribution
         bought_amount = self.get_sold_amount()
+        self.record[2] = bought_amount
 
         # rolling subtraction of demand from storage
         for index in range(self.max_age):
@@ -163,8 +157,9 @@ class Store():
         - update storage for the demand of the day
         - place new order
         """
-
+        self.record[1] = np.sum(self.storage)
         self.storage[0] = received
+        self.record[0] = received
 
         # process supply and demand
         self.overbuy = self.update_storage()
@@ -172,7 +167,13 @@ class Store():
         self.ordered_amount = self.avg - sum(self.storage)
         
         self.ordered_amount = max(self.ordered_amount, 0)
-        self.history = np.append(self.history,np.array([[received,self.overbuy,self.ordered_amount]]),axis=0)
+        
+        self.record[3] = self.overbuy
+        self.record[4] = self.ordered_amount
+        self.record[5] = self.expired
+        self.record = np.reshape(self.record, (-1,6))
+        self.history = np.append(self.history,self.record,axis=0)
+        self.record = np.zeros(6)
 
 if __name__ == '__main__':
     #testing
@@ -196,4 +197,8 @@ if __name__ == '__main__':
     x = np.append(x,np.array([[1,2,3,4]]),axis=0)
     x = np.append(x,np.array([[1,2,3,4]]),axis=0)
     x = np.append(x,np.array([[1,2,3,4]]),axis=0)
-    print(x[:,1])
+    y = np.zeros(4)
+    y = np.reshape(y,(-1,4))
+    print(y)
+    x = np.append(x,y,axis=0)
+    print(x)
