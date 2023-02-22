@@ -40,7 +40,7 @@ agent = Agent(
     learn_rate=     0.001,
     gamma=          0.99,
     epsilon_decay=  0.996,
-    epsilon_min=    0.01,
+    epsilon_min=    1.0,
     temperature=    5,#not important atm
     batch_size=     3,
     memory_size=    100,
@@ -48,14 +48,15 @@ agent = Agent(
     policy_save_rate=20,
 )
 
-agent.load_model(r"C:\Users\ASUS\Downloads\ItWork\Projects\Udemy_PyML_Bootc\LIDL_ML_Procect\models\480_warehouse_agent.pth")
+agent.load_model(r"C:\Users\ASUS\Downloads\ItWork\Projects\Udemy_PyML_Bootc\LIDL_ML_Procect\models\300_(-700.0)_warehouse_agent.pth")
 state = env.reset()
 for j in range(300):
-    # action = agent.choose_action(state)
-    action = max(0, sum([store.avg for store in env.stores]) - sum([sum(store.storage) for store in env.stores]))
+    action = agent.choose_action(state,simulate=True)
+    #action = max(0, sum([store.avg for store in env.stores]) - sum([sum(store.storage) for store in env.stores]))
     
-    
+    # print(state,action,end="\t")
     state, reward, done, error = env.step(action)
+    # print(reward)
     if done:
         break
 
@@ -67,6 +68,9 @@ bought = env.stores[0].history[:,2]
 overbuy = env.stores[0].history[:,3]
 ordered = env.stores[0].history[:,4]
 expired = env.stores[0].history[:,5]
+
+actions = env.stores[0].history[:,0]#+env.stores[0].history[:,0]+env.stores[0].history[:,0]
+# plt.hist(actions, bins=env.maxorder)
 
 ax1.plot(recieved,"tab:green")
 ax1.set_title("Recieved")
@@ -85,7 +89,7 @@ ax4.set_title("Overbuy")
 ax4.grid()
 
 ax5.plot(ordered,"tab:purple")
-ax5.set_title("Ordered amount")
+ax5.set_title("Store status")
 ax5.grid()
 
 ax6.plot(expired,"tab:red")

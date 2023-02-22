@@ -24,7 +24,7 @@ class WarehouseEnv():
         # calculate state size
         for store in self.stores:
             self.maxorder += max(store.avg_range) * 3
-            self.state_size += store.max_age + 1
+            self.state_size += store.max_age + 2
         self.state_size += 1
 
     def step(self, action):
@@ -47,17 +47,18 @@ class WarehouseEnv():
             store.one_day(provided)
             
             reward -= store.expired * 100
-            reward += 15 * sum(store.storage) - store.min_items
+            reward += 15 * (sum(store.storage) - store.min_items)
             reward -= sum(store.storage * (np.arange(len(store.storage))+1)) #the older the item the more -points it gets
-            
+
             observation.extend(store.storage)
             observation.append(provided)
+            observation.append(store.ordered_amount)
             expired += store.expired
 
         observation.append(expired)
         
         # * PREPARATIONS
-        reward -= 100 * self.storage[-1]
+        # reward -= 30 * self.storage[-1]
         self.storage = np.roll(self.storage, 1)
         self.daycount += 1
         self.storage[0] = action

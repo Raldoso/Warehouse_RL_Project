@@ -1,12 +1,15 @@
 from enviroment import WarehouseEnv, Store
 from agent import Agent
 
+
+NUM_DAYS = 500
+NUM_EPISODES = 500
 """ 
 SETUP ENVIROMENT
 """
 env = WarehouseEnv(
     max_age=6,
-    n_days=500
+    n_days=NUM_DAYS
     )
 env.addStore(
     Store(
@@ -28,25 +31,24 @@ env.setup_spaces()
 """
 SETUP AGENT
 """
-NUM_EPISODES = 500
 scores = []
 agent = Agent(
     state_size=env.state_size,
     action_size=env.maxorder,
-    learn_rate=     0.001,
-    gamma=          0.99,
-    epsilon_decay=  0.996,
-    epsilon_min=    0.05,
-    temperature=    5,#not important atm
-    batch_size=     3,
-    memory_size=    100,
-    target_update_rate=50,
-    policy_save_rate=20,
+    learn_rate=     0.001,# NN Learning Rate
+    gamma=          0.6, # Long Term Consideration Factor
+    epsilon_decay=  0.996,# Epsilon Exponential Decay Factor
+    epsilon_min=    0.1,#  Min value for Epsilon
+    temperature=    5,#     SoftMax Value Equaliser
+    batch_size=     5,#     Num of Training Samples at Once
+    memory_size=    100,#   Num of Training Samples in Memory
+    target_update_rate=50,# Steps between Target Copy
+    policy_save_rate=20,#   Episodes between Saving Policy
 )
-""" 
+"""
 LOOP
 """
-for episode in range(NUM_EPISODES):
+for episode in range(1,NUM_EPISODES+1):
     score = 0
     done = False
     step = 0
@@ -69,9 +71,7 @@ for episode in range(NUM_EPISODES):
 
         agent.memory.add_transition(transition=(state, action, reward, next_state))
             
-        if episode % agent.policy_save_rate == 0:
-            agent.save_model(f"{episode}_({score})_warehouse_agent")
-        if step % 100 == 0:
+        if step % 200 == 0:
             agent.epsilon = max(agent.epsilon*agent.epsilon_decay, agent.epsilon_min)
         
         # We pass batches of observations to the agent
@@ -84,7 +84,9 @@ for episode in range(NUM_EPISODES):
     if error:break
     scores.append(score)
     
-    print(f"Episode: {episode},\tScore: {score},\tEps: {agent.epsilon:4f}")
+    if episode % agent.policy_save_rate == 0:
+        agent.save_model(f"{episode}_({score})_warehouse_agent")
+    print(f"Episode: {episode},\tSc: {score},\tAvg Rw/D: {score//NUM_DAYS}\tEps: {agent.epsilon:.3f}")
 
 with open('models\\scores.txt', 'w') as f:
     f.write("\n".join(map(str, scores)))
@@ -92,4 +94,5 @@ with open('models\\scores.txt', 'w') as f:
 import matplotlib.pyplot as plt
 
 plt.plot(range(len(scores)), scores)
+plt.grid(True)
 plt.show()

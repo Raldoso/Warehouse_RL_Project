@@ -8,32 +8,49 @@ from torch.autograd import Variable
 
 class RQNetwork(nn.Module):
     def __init__(self,state_size,action_size,lr):
-        self.state_size = state_size
         super(RQNetwork,self).__init__()
+        self.state_size = state_size
         
         self.lstm = nn.LSTM(state_size, state_size)
         self.fc1 = nn.Linear(state_size,(action_size+action_size)//2)
         self.fc2 = nn.Linear((action_size+action_size)//2,action_size)
+        
         self.optimizer = torch.optim.Adam(self.parameters(),lr=lr)
         self.loss = nn.MSELoss()
         self.device = torch.device("cuda:0" if torch.cuda.is_available() else "cpu")
         self.to(self.device)
 
-        self.h_0 = Variable(torch.zeros(1, self.state_size))
-        self.c_0 = Variable(torch.zeros(1, self.state_size))
+        self.h_0 = Variable(torch.zeros(1, self.state_size).to(self.device))
+
+
+        self.c_0 = Variable(torch.zeros(1, self.state_size).to(self.device))
         
     def forward(self,x, learn=False):
+        """
+        Learning mode separates the simulation from the training
+            hidden state and cell state during training is 
+            temporarily stored,
+            rather then re-used like in the real simulation
+        """
         x = torch.Tensor(x).to(self.device)
         if learn:
-            self.h_0 = Variable(torch.zeros(1, self.state_size))
-            self.c_0 = Variable(torch.zeros(1, self.state_size))
+            h_0 = Variable(torch.zeros(1, self.state_size).to(self.device))
 
-        output, _ = self.lstm(x, (self.h_0, self.c_0))
+            c_0 = Variable(torch.zeros(1, self.state_size).to(self.device))
+
+        else:
+            h_0 = self.h_0
+            c_0 = self.c_0
+
+        output, (h_0,c_0) = self.lstm(x, (h_0, c_0))
         output = self.fc1(torch.relu(output[-1]))
         output = self.fc2(torch.relu(output))
+        
+        if not learn:
+            self.h_0 = h_0
+            self.c_0 = c_0
+        
         return output
-    
-
 
 class QNetwork(nn.Module):
     def __init__(self,state_size,action_size,lr):
@@ -42,9 +59,9 @@ class QNetwork(nn.Module):
         self.linear = nn.Sequential(
             nn.Linear(state_size,state_size),
             nn.ReLU(),
-            nn.Linear(state_size,(action_size+action_size)//2),
+            nn.Linear(state_size,(state_size+action_size)//2),
             nn.ReLU(),
-            nn.Linear((action_size+action_size)//2,action_size))
+            nn.Linear((state_size+action_size)//2,action_size))
         
         self.optimizer = torch.optim.Adam(self.parameters(),lr=lr)
         self.loss = nn.MSELoss()
@@ -115,14 +132,16 @@ class Agent():
         self.step = 0
         self.Q_policy = QNetwork(state_size,action_size,self.learn_rate)
         self.Q_target = QNetwork(state_size,action_size,self.learn_rate)
-        
     
-    def choose_action(self,state):
+    def choose_action(self,state,simulate=False):
         rnd = np.random.random()
-        q_values = self.Q_policy(state)
-        if rnd < 1 - self.epsilon:
+        q_values = self.Q_policy.forward(torch.Tensor(state).view(1,self.state_size)).to(self.Q_policy.device) # add batch dimension for the NN
+
+        if rnd < 1 - self.epsilon or simulate:
+            print("max")
             action = torch.argmax(q_values).item()
         else:
+            print("rand")
             action = np.random.choice(np.arange(self.action_size))
         return action
         
@@ -144,16 +163,16 @@ class Agent():
         next_states = torch.Tensor(list(state_batch[:,3])).to(self.Q_policy.device)
         rewards = torch.Tensor(list(state_batch[:,2])).to(self.Q_policy.device)
 
-        # pass through network
-        Q_values = self.Q_policy(states).to(self.Q_policy.device)
-        Q_next_values = self.Q_target(next_states).to(self.Q_policy.device)
+        # pass through network in learning mode
+        Q_values = self.Q_policy.forward(states).to(self.Q_policy.device)
+        Q_next_values = self.Q_target.forward(next_states).to(self.Q_policy.device)
         
         # loss calculation
-        max_q_indexes = torch.argmax(Q_values,dim=1).to(self.Q_policy.device)
+        max_q_index = torch.argmax(Q_values,dim=1).to(self.Q_policy.device)
         
         # (BELLMANN-EQUATION)
         Q_targets = Q_values.clone()
-        Q_targets[np.arange(self.batch_size),max_q_indexes] = rewards + self.gamma*torch.max(Q_next_values[1])
+        Q_targets[np.arange(self.batch_size),max_q_index] = rewards + self.gamma*torch.max(Q_next_values[1])
         
         loss = self.Q_policy.loss(Q_targets,Q_values).to(self.Q_policy.device)
         loss.backward()
