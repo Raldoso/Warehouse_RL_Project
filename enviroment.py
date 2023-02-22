@@ -46,8 +46,8 @@ class WarehouseEnv():
 
             store.one_day(provided)
             
-            reward -= store.expired * 100
-            reward += 15 * (sum(store.storage) - store.min_items)
+            reward -= store.expired * 10
+            reward += 5 * (sum(store.storage) - store.min_items)
             reward -= sum(store.storage * (np.arange(len(store.storage))+1)) #the older the item the more -points it gets
 
             observation.extend(store.storage)
@@ -116,8 +116,6 @@ class Store():
         return max(round(np.random.normal(self.avg, self.std, 1)[0], 0), 0)
 
     def reset(self):
-        #self.avg = 0
-        #self.std = 0
         self.overbuy = 0
         self.ordered_amount = 0
         self.storage[:] = 0
@@ -143,6 +141,7 @@ class Store():
                 self.storage[index] = (-1) * bought_amount
                 bought_amount = 0
                 break
+
         # get too old items
         # shift storage by one day
         self.expired = self.storage[-1]
@@ -176,30 +175,4 @@ class Store():
         self.history = np.append(self.history,self.record,axis=0)
         self.record = np.zeros(6)
 
-if __name__ == '__main__':
-    #testing
-    w = WarehouseEnv(
-        max_age=6,
-        n_days=500
-    )
-    w.addStore(Store(
-        avg_range=[8],
-        std_range=[5],
-        max_age=6))
-    w.setup_spaces()
-    # print(w.observation_space.sample())
-    # print(w.action_space.sample())
-    print(w.maxorder)
-    print(w.state_size)
-    import random
-    #[w.step(7) for _ in range(100)]
-    x = np.zeros((0,4))
-    print(x)
-    x = np.append(x,np.array([[1,2,3,4]]),axis=0)
-    x = np.append(x,np.array([[1,2,3,4]]),axis=0)
-    x = np.append(x,np.array([[1,2,3,4]]),axis=0)
-    y = np.zeros(4)
-    y = np.reshape(y,(-1,4))
-    print(y)
-    x = np.append(x,y,axis=0)
-    print(x)
+

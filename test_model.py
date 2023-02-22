@@ -48,7 +48,7 @@ agent = Agent(
     policy_save_rate=20,
 )
 
-agent.load_model(r"C:\Users\ASUS\Downloads\ItWork\Projects\Udemy_PyML_Bootc\LIDL_ML_Procect\models\300_(-700.0)_warehouse_agent.pth")
+agent.load_model(r"C:\Users\ASUS\Downloads\ItWork\Projects\Udemy_PyML_Bootc\LIDL_ML_Procect\models\500_(-19430.0)_warehouse_agent.pth")
 state = env.reset()
 for j in range(300):
     action = agent.choose_action(state,simulate=True)

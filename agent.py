@@ -1,78 +1,8 @@
 import torch
-import torch.nn as nn
-from torch.autograd import Variable
 import numpy as np
+from nnetworks import QNetwork
 import os
 
-from torch.autograd import Variable
-
-class RQNetwork(nn.Module):
-    def __init__(self,state_size,action_size,lr):
-        super(RQNetwork,self).__init__()
-        self.state_size = state_size
-        
-        self.lstm = nn.LSTM(state_size, state_size)
-        self.fc1 = nn.Linear(state_size,(action_size+action_size)//2)
-        self.fc2 = nn.Linear((action_size+action_size)//2,action_size)
-        
-        self.optimizer = torch.optim.Adam(self.parameters(),lr=lr)
-        self.loss = nn.MSELoss()
-        self.device = torch.device("cuda:0" if torch.cuda.is_available() else "cpu")
-        self.to(self.device)
-
-        self.h_0 = Variable(torch.zeros(1, self.state_size).to(self.device))
-
-
-        self.c_0 = Variable(torch.zeros(1, self.state_size).to(self.device))
-        
-    def forward(self,x, learn=False):
-        """
-        Learning mode separates the simulation from the training
-            hidden state and cell state during training is 
-            temporarily stored,
-            rather then re-used like in the real simulation
-        """
-        x = torch.Tensor(x).to(self.device)
-        if learn:
-            h_0 = Variable(torch.zeros(1, self.state_size).to(self.device))
-
-            c_0 = Variable(torch.zeros(1, self.state_size).to(self.device))
-
-        else:
-            h_0 = self.h_0
-            c_0 = self.c_0
-
-        output, (h_0,c_0) = self.lstm(x, (h_0, c_0))
-        output = self.fc1(torch.relu(output[-1]))
-        output = self.fc2(torch.relu(output))
-        
-        if not learn:
-            self.h_0 = h_0
-            self.c_0 = c_0
-        
-        return output
-
-class QNetwork(nn.Module):
-    def __init__(self,state_size,action_size,lr):
-        super(QNetwork,self).__init__()
-        
-        self.linear = nn.Sequential(
-            nn.Linear(state_size,state_size),
-            nn.ReLU(),
-            nn.Linear(state_size,(state_size+action_size)//2),
-            nn.ReLU(),
-            nn.Linear((state_size+action_size)//2,action_size))
-        
-        self.optimizer = torch.optim.Adam(self.parameters(),lr=lr)
-        self.loss = nn.MSELoss()
-        self.device = torch.device("cuda:0" if torch.cuda.is_available() else "cpu")
-        self.to(self.device)
-        
-    def forward(self,x):
-        x = torch.Tensor(x).to(self.device)
-
-        x = self.linear(x)
-        return x
 
 class StateMemory():
     def __init__(self,capacity,batch_size):
@@ -138,10 +68,10 @@ class Agent():
         q_values = self.Q_policy.forward(torch.Tensor(state).view(1,self.state_size)).to(self.Q_policy.device) # add batch dimension for the NN
 
         if rnd < 1 - self.epsilon or simulate:
-            print("max")
+            # print("max")
             action = torch.argmax(q_values).item()
         else:
-            print("rand")
+            # print("rand")
             action = np.random.choice(np.arange(self.action_size))
         return action
         
@@ -170,9 +100,8 @@ class Agent():
         # loss calculation
         max_q_index = torch.argmax(Q_values,dim=1).to(self.Q_policy.device)
         
-        # (BELLMANN-EQUATION)
         Q_targets = Q_values.clone()
-        Q_targets[np.arange(self.batch_size),max_q_index] = rewards + self.gamma*torch.max(Q_next_values[1])
+        Q_targets[np.arange(self.batch_size),max_q_index] = rewards + self.gamma*torch.max(Q_next_values[1]) # (BELLMANN-EQUATION)
         
         loss = self.Q_policy.loss(Q_targets,Q_values).to(self.Q_policy.device)
         loss.backward()
@@ -183,16 +112,6 @@ class Agent():
             # print("Copy target network")
             self.Q_target.load_state_dict(self.Q_policy.state_dict())
         
-        #self.epsilon = max(self.epsilon*self.epsilon_decay, self.epsilon_min)
         self.step += 1
-if __name__ == "__main__":
-    # print(torch.rand(3,1,5))
-    x = torch.rand(3,2)
-    y = torch.rand(3,2)
-    print(x)
-    print(y)
-    # print(y.split(1,dim=1))
-    # [print(i) for i in y.split(1,dim=0)]
-    # print(torch.cat((x,y),dim=1))
-    for i in range(y.size()[0]):
-        print(y[i])
+
+
