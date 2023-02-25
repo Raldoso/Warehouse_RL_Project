@@ -1,4 +1,5 @@
-from enviroment import WarehouseEnv, Store
+from enviroment import WarehouseEnv
+from store import Store
 from agent import Agent
 
 
@@ -38,7 +39,7 @@ agent = Agent(
     learn_rate=     0.001,# NN Learning Rate
     gamma=          0.6, # Long Term Consideration Factor
     epsilon_decay=  0.996,# Epsilon Exponential Decay Factor
-    epsilon_min=    0.1,#  Min value for Epsilon
+    epsilon_min=    0.01,#  Min value for Epsilon
     temperature=    5,#     SoftMax Value Equaliser
     batch_size=     5,#     Num of Training Samples at Once
     memory_size=    100,#   Num of Training Samples in Memory

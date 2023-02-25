@@ -1,15 +1,17 @@
-from enviroment import WarehouseEnv, Store
+from enviroment import WarehouseEnv
 import matplotlib.pyplot as plt
 import matplotlib.gridspec as GridSpec
 from agent import Agent
+from store import Store
 import numpy as np
 
 """ 
 SETUP ENVIROMENT
 """
+NUM_DAYS = 300
 env = WarehouseEnv(
     max_age=6,
-    n_days=500
+    n_days=NUM_DAYS
     )
 env.addStore(
     Store(
@@ -31,8 +33,6 @@ env.setup_spaces()
 """ 
 RELOAD MODEL AND TEST AGENT
 """
-
-NUM_EPISODES = 300
 scores = []
 agent = Agent(
     state_size=env.state_size,
@@ -48,9 +48,10 @@ agent = Agent(
     policy_save_rate=20,
 )
 
-agent.load_model(r"C:\Users\ASUS\Downloads\ItWork\Projects\Udemy_PyML_Bootc\LIDL_ML_Procect\models\300_(-700.0)_warehouse_agent.pth")
+
+agent.load_model(r".\models\500_(115262.24172469262)_warehouse_agent.pth")
 state = env.reset()
-for j in range(300):
+for j in range(NUM_DAYS):
     action = agent.choose_action(state,simulate=True)
     #action = max(0, sum([store.avg for store in env.stores]) - sum([sum(store.storage) for store in env.stores]))
     

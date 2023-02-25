@@ -138,10 +138,10 @@ class Agent():
         q_values = self.Q_policy.forward(torch.Tensor(state).view(1,self.state_size)).to(self.Q_policy.device) # add batch dimension for the NN
 
         if rnd < 1 - self.epsilon or simulate:
-            print("max")
+            #print("max")
             action = torch.argmax(q_values).item()
         else:
-            print("rand")
+            #print("rand")
             action = np.random.choice(np.arange(self.action_size))
         return action
         
@@ -172,7 +172,7 @@ class Agent():
         
         # (BELLMANN-EQUATION)
         Q_targets = Q_values.clone()
-        Q_targets[np.arange(self.batch_size),max_q_index] = rewards + self.gamma*torch.max(Q_next_values[1])
+        Q_targets[np.arange(self.batch_size),max_q_index] = rewards + self.gamma*torch.max(Q_next_values,dim=1)[0]
         
         loss = self.Q_policy.loss(Q_targets,Q_values).to(self.Q_policy.device)
         loss.backward()
