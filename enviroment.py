@@ -24,9 +24,10 @@ class WarehouseEnv():
         # give upper bound for the Warehouse orders
         # calculate state size
         for store in self.stores:
-            self.maxorder += store.avg * 3
-            self.state_size += store.max_age + 4
-        self.state_size += 1
+            self.maxorder += store.forecast.avg * 3
+            self.state_size += store.max_age 
+            self.state_size += store.pred_len
+            self.state_size += 1
         
 
     def step(self, action):
@@ -34,7 +35,7 @@ class WarehouseEnv():
 
         # * RECIEVEING AND DISTRIBUTING
         order_sum = sum([x.ordered_amount for x in self.stores])  # get global order for warehouse
-        avg_sum = sum([x.avg for x in self.stores])
+        avg_sum = sum([x.forecast.avg for x in self.stores])
 
         # give out orders to the Stores, calculate rewards
         expired = 0
@@ -44,19 +45,18 @@ class WarehouseEnv():
             if order_sum != 0:
                 provided = m.floor(self.storage[4]*(store.ordered_amount/order_sum))
             else:
-                provided = m.floor(self.storage[4]*(store.avg/avg_sum))
+                provided = m.floor(self.storage[4]*(store.forecast.avg/avg_sum))
 
-            store.one_day(provided, self.daycount)
+            store.one_day(provided)
             
             reward -= store.expired * 100
             reward += 15 * (sum(store.storage) - store.min_items)
             reward -= sum(store.storage * (np.arange(len(store.storage))+1)) #the older the item the more -points it gets
 
             observation.extend(store.storage)
-            observation.extend(store.data.getsample(self.daycount, length=4))
-            expired += store.expired
+            observation.extend(store.forecast.data)
+            observation.append(store.expired)
 
-        observation.append(expired)
         
         # * PREPARATIONS
         # reward -= 30 * self.storage[-1]
