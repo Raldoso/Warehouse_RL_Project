@@ -1,5 +1,6 @@
 from enviroment import WarehouseEnv, Store
 from agent import Agent
+import matplotlib.pyplot as plt
 
 
 NUM_DAYS = 500
@@ -15,17 +16,20 @@ env.addStore(
     Store(
         avg_range=[8],
         std_range=[5],
-        max_age=6)) 
+        max_age=6,
+        min_items_percent=0.1))
 env.addStore(
     Store(
         avg_range=[13],
         std_range=[5],
-        max_age=6))
+        max_age=6,
+        min_items_percent=0.1))
 env.addStore(
     Store(
         avg_range=[20],
         std_range=[5],
-        max_age=6))
+        max_age=6,
+        min_items_percent=0.1))
 env.setup_spaces()
 
 """
@@ -36,7 +40,7 @@ agent = Agent(
     state_size=env.state_size,
     action_size=env.maxorder,
     learn_rate=     0.001,# NN Learning Rate
-    gamma=          0.6, # Long Term Consideration Factor
+    gamma=          0.0, # Long Term Consideration Factor
     epsilon_decay=  0.996,# Epsilon Exponential Decay Factor
     epsilon_min=    0.1,#  Min value for Epsilon
     temperature=    5,#     SoftMax Value Equaliser
@@ -48,6 +52,13 @@ agent = Agent(
 """
 LOOP
 """
+fig, ax = plt.subplots()
+ax.grid(True)
+plt.title("Cumulative Reward History")
+plt.xlabel("Episode")
+plt.ylabel("Score")
+
+agent.load_model(r"C:\Users\ASUS\Downloads\ItWork\Projects\Udemy_PyML_Bootc\LIDL_ML_Procect\models\360_(105493.0)_warehouse_agent.pth")
 for episode in range(1,NUM_EPISODES+1):
     score = 0
     done = False
@@ -81,18 +92,19 @@ for episode in range(1,NUM_EPISODES+1):
         
         state = next_state
         step += 1
+
     if error:break
-    scores.append(score)
     
+    scores.append(score)
     if episode % agent.policy_save_rate == 0:
         agent.save_model(f"{episode}_({score})_warehouse_agent")
+    
     print(f"Episode: {episode},\tSc: {score},\tAvg Rw/D: {score//NUM_DAYS}\tEps: {agent.epsilon:.3f}")
+
+    ax.plot(range(len(scores)),scores,color="blue")
+    plt.pause(0.001)
 
 with open('models\\scores.txt', 'w') as f:
     f.write("\n".join(map(str, scores)))
 
-import matplotlib.pyplot as plt
-
-plt.plot(range(len(scores)), scores)
-plt.grid(True)
 plt.show()

@@ -17,8 +17,6 @@ class RQNetwork(nn.Module):
         self.to(self.device)
 
         self.h_0 = Variable(torch.zeros(1, self.state_size).to(self.device))
-
-
         self.c_0 = Variable(torch.zeros(1, self.state_size).to(self.device))
         
     def forward(self,x, learn=False):
@@ -53,6 +51,8 @@ class QNetwork(nn.Module):
         super(QNetwork,self).__init__()
         
         self.linear = nn.Sequential(
+            nn.Linear(state_size,state_size),
+            nn.ReLU(),
             nn.Linear(state_size,state_size),
             nn.ReLU(),
             nn.Linear(state_size,(state_size+action_size)//2),

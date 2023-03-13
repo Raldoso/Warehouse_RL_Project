@@ -24,8 +24,8 @@ class WarehouseEnv():
         # calculate state size
         for store in self.stores:
             self.maxorder += max(store.avg_range) * 3
-            self.state_size += store.max_age + 2
-        self.state_size += 1
+            self.state_size += store.max_age + 3
+        # self.state_size += 1
 
     def step(self, action):
         reward = 0
@@ -46,16 +46,17 @@ class WarehouseEnv():
 
             store.one_day(provided)
             
-            reward -= store.expired * 10
-            reward += 5 * (sum(store.storage) - store.min_items)
+            reward -= 60*store.expired
+            reward += 15*(sum(store.storage) - store.min_items)
             reward -= sum(store.storage * (np.arange(len(store.storage))+1)) #the older the item the more -points it gets
 
             observation.extend(store.storage)
             observation.append(provided)
             observation.append(store.ordered_amount)
-            expired += store.expired
+            observation.append(store.expired)
+            # expired += store.expired
 
-        observation.append(expired)
+        # observation.append(expired)
         
         # * PREPARATIONS
         # reward -= 30 * self.storage[-1]
@@ -164,7 +165,7 @@ class Store():
         # process supply and demand
         self.overbuy = self.update_storage()
         # calculate order for next day
-        self.ordered_amount = self.avg - sum(self.storage)
+        self.ordered_amount = (1+self.min_items_percent)*self.avg - sum(self.storage)
         
         self.ordered_amount = max(self.ordered_amount, 0)
         
@@ -176,3 +177,30 @@ class Store():
         self.record = np.zeros(6)
 
 
+if __name__ == '__main__':
+    #testing
+    w = WarehouseEnv(
+        max_age=6,
+        n_days=500
+    )
+    w.addStore(Store(
+        avg_range=[8],
+        std_range=[5],
+        max_age=6))
+    w.setup_spaces()
+    # print(w.observation_space.sample())
+    # print(w.action_space.sample())
+    print(w.maxorder)
+    print(w.state_size)
+    import random
+    #[w.step(7) for _ in range(100)]
+    x = np.zeros((0,4))
+    print(x)
+    x = np.append(x,np.array([[1,2,3,4]]),axis=0)
+    x = np.append(x,np.array([[1,2,3,4]]),axis=0)
+    x = np.append(x,np.array([[1,2,3,4]]),axis=0)
+    y = np.zeros(4)
+    y = np.reshape(y,(-1,4))
+    print(y)
+    x = np.append(x,y,axis=0)
+    print(x)
