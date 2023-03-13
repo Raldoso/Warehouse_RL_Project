@@ -1,15 +1,14 @@
 import numpy as np
-from datagen import dataGenerator, sDataGenerator
+from datagen import Data
 
 class Store():
-    def __init__(self, avg_range, std_range, max_age=6,min_items_percent=0.2,):
+    def __init__(self, avg, std, max_age=6,min_items_percent=0.2,):
 
-        self.avg_range = avg_range
-        self.std_range = std_range
+
         self.max_age = max_age
-        
-        self.avg = avg_range[0]
-        self.std = std_range[0]
+        self.data = Data(avg=avg, std=std)
+        self.avg = avg
+        self.std = std
         self.overbuy = 0
         self.min_items = 0
         self.min_items_percent = min_items_percent
@@ -49,8 +48,6 @@ class Store():
         self.recieved = 0
         self.expired = 0
         self.history = np.zeros((0,6))
-        #self.pred = dataGenerator(self.n_days+10, max(self.avg_range) + max(self.std_range), noiseStrength=0.2, resolution=10)
-        self.pred = sDataGenerator(self.n_days+10, max(self.avg_range) + max(self.std_range), weekly=False, monthly=False, trend=False)
 
     def update_storage(self, daycount):
         """
@@ -58,7 +55,7 @@ class Store():
         """
 
         # get daily demand amount from distribution
-        bought_amount = self.pred[daycount]
+        bought_amount = self.data.getsample(daycount)[0]
         self.record[2] = bought_amount
 
         # rolling subtraction of demand from storage

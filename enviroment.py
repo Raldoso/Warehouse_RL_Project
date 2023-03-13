@@ -24,7 +24,7 @@ class WarehouseEnv():
         # give upper bound for the Warehouse orders
         # calculate state size
         for store in self.stores:
-            self.maxorder += max(store.avg_range) * 3
+            self.maxorder += store.avg * 3
             self.state_size += store.max_age + 4
         self.state_size += 1
         
@@ -53,7 +53,7 @@ class WarehouseEnv():
             reward -= sum(store.storage * (np.arange(len(store.storage))+1)) #the older the item the more -points it gets
 
             observation.extend(store.storage)
-            observation.extend(store.pred[self.daycount:self.daycount+4])
+            observation.extend(store.data.getsample(self.daycount, length=4))
             expired += store.expired
 
         observation.append(expired)

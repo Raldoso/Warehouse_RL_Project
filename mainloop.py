@@ -14,18 +14,18 @@ env = WarehouseEnv(
     )
 env.addStore(
     Store(
-        avg_range=[8],
-        std_range=[5],
+        avg=8,
+        std=5,
         max_age=6)) 
 env.addStore(
     Store(
-        avg_range=[13],
-        std_range=[5],
+        avg=13,
+        std=5,
         max_age=6))
 env.addStore(
     Store(
-        avg_range=[20],
-        std_range=[5],
+        avg=20,
+        std=5,
         max_age=6))
 env.setup_spaces()
 

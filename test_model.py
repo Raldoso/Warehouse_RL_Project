@@ -15,18 +15,18 @@ env = WarehouseEnv(
     )
 env.addStore(
     Store(
-        avg_range=[8],
-        std_range=[5],
+        avg=8,
+        std=5,
         max_age=6)) 
 env.addStore(
     Store(
-        avg_range=[13],
-        std_range=[5],
+        avg=13,
+        std=5,
         max_age=6))
 env.addStore(
     Store(
-        avg_range=[20],
-        std_range=[5],
+        avg=20,
+        std=5,
         max_age=6))
 env.setup_spaces()
 
@@ -49,7 +49,7 @@ agent = Agent(
 )
 
 
-agent.load_model(r".\models\500_(115262.24172469262)_warehouse_agent.pth")
+agent.load_model(r".\models\320_(41665.0)_warehouse_agent.pth")
 state = env.reset()
 for j in range(NUM_DAYS):
     action = agent.choose_action(state,simulate=True)
@@ -63,12 +63,12 @@ for j in range(NUM_DAYS):
 
 fig, (ax1, ax2, ax3, ax4, ax5, ax6) = plt.subplots(6, 1,constrained_layout=True)
 
-recieved = env.stores[0].history[:,0]
-storage = env.stores[0].history[:,1]
-bought = env.stores[0].history[:,2]
-overbuy = env.stores[0].history[:,3]
-ordered = env.stores[0].history[:,4]
-expired = env.stores[0].history[:,5]
+recieved = env.stores[0].history[:,0] +  env.stores[1].history[:,0] +  env.stores[2].history[:,0]
+storage = env.stores[0].history[:,1] +  env.stores[1].history[:,1] +  env.stores[2].history[:,1]
+bought = env.stores[0].history[:,2] +  env.stores[1].history[:,2] +  env.stores[2].history[:,2]
+overbuy = env.stores[0].history[:,3] +  env.stores[1].history[:,3] +  env.stores[2].history[:,3]
+ordered = env.stores[0].history[:,4] +  env.stores[1].history[:,4] +  env.stores[2].history[:,4]
+expired = env.stores[0].history[:,5] +  env.stores[1].history[:,5] +  env.stores[2].history[:,5]
 
 actions = env.stores[0].history[:,0]#+env.stores[0].history[:,0]+env.stores[0].history[:,0]
 # plt.hist(actions, bins=env.maxorder)
