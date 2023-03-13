@@ -1,14 +1,13 @@
 import numpy as np
-from datagen import Data
+from forecasting import Forecast
 
 class Store():
-    def __init__(self, avg, std, max_age=6,min_items_percent=0.2,):
+    def __init__(self, avg, std,pred_len=4, max_age=6,min_items_percent=0.2,):
 
 
         self.max_age = max_age
-        self.data = Data(avg=avg, std=std)
-        self.avg = avg
-        self.std = std
+        self.pred_len = pred_len
+        self.forecast = Forecast(avg=avg, std=std, pred_len=self.pred_len)
         self.overbuy = 0
         self.min_items = 0
         self.min_items_percent = min_items_percent
@@ -16,7 +15,7 @@ class Store():
         self.n_days = 0
 
         # start with empty storage and order average for fillup
-        self.ordered_amount = self.avg
+        self.ordered_amount = self.forecast.data[1]
         self.expired = 0
         self.storage = np.zeros(self.max_age)
         
@@ -24,38 +23,38 @@ class Store():
         self.record = np.zeros(6)
         
 
-    def get_sold_amount(self):
-        """
-        Create variance in daily distribution by picking random for the average and deviation.
-        Recalculate minimum storage to stay at the end.
-        The enforcement of min_items happens within the reward system
-        """
+    # def get_sold_amount(self):
+    #     """
+    #     Create variance in daily distribution by picking random for the average and deviation.
+    #     Recalculate minimum storage to stay at the end.
+    #     The enforcement of min_items happens within the reward system
+    #     """
 
-        # update distribution for current day
-        self.avg = np.random.choice(self.avg_range)
-        self.std = np.random.choice(self.std_range)
-        self.min_items = round(self.avg * self.min_items_percent)
+    #     # update distribution for current day
+    #     self.avg = np.random.choice(self.avg_range)
+    #     self.std = np.random.choice(self.std_range)
+    #     self.min_items = round(self.avg * self.min_items_percent)
 
-        # return bought amount for the day
-        return max(round(np.random.normal(self.avg, self.std, 1)[0], 0), 0)
+    #     # return bought amount for the day
+    #     return max(round(np.random.normal(self.avg, self.std, 1)[0], 0), 0)
 
     def reset(self):
         #self.avg = 0
         #self.std = 0
         self.overbuy = 0
-        self.ordered_amount = 0
+        self.ordered_amount = self.forecast.data[1]
         self.storage[:] = 0
         self.recieved = 0
         self.expired = 0
         self.history = np.zeros((0,6))
 
-    def update_storage(self, daycount):
+    def update_storage(self):
         """
         Subtract demand from storage and return the supply-demand difference
         """
 
         # get daily demand amount from distribution
-        bought_amount = self.data.getsample(daycount)[0]
+        bought_amount = self.forecast.data[0]
         self.record[2] = bought_amount
 
         # rolling subtraction of demand from storage
@@ -75,7 +74,7 @@ class Store():
 
         return bought_amount
 
-    def one_day(self, received, daycount):
+    def one_day(self, received):
         """
         - simulate one day for the Store
         - recieving supply
@@ -87,9 +86,9 @@ class Store():
         self.record[0] = received
 
         # process supply and demand
-        self.overbuy = self.update_storage(daycount)
+        self.overbuy = self.update_storage()
         # calculate order for next day
-        self.ordered_amount = self.avg - sum(self.storage)
+        self.ordered_amount = self.forecast.data[1] - sum(self.storage)
         
         self.ordered_amount = max(self.ordered_amount, 0)
         
