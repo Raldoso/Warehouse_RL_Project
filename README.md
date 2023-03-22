@@ -1,33 +1,49 @@
 # Raktár előrejelző dokumentációja
 
 ## A program célja
-A program célja a raktárban lévő árukészletek menedzselése, a rendelés mennyiségének t+4 napra prediktálása.
-
+A program célja a raktárban lévő árukészletek menedzselése, a rendelés mennyiségének t+4 napra prediktálása a boltok várható fogyásának ismeretében
+ 
 ## A környezet
-A megerősítő tanulás ágense számára létrehoztunk egy környezetet, melyben egy központi raktár, és az alá tartozó boltok találhatóak. A raktár célja, hogy minden nap elég áru legyen, hogy a boltok rendeléseit kielégíthesse. A boltok minden nap a másnapi fogyás várható értékére egészítik ki saját árukészletüket.
+A megerősítő tanulás ágense számára létrehoztunk egy környezetet, melyben egy központi raktár, és az alá tartozó boltok találhatóak. A raktár célja, hogy minden nap elég áru legyen, hogy a boltok számára biztosíthassa a másnapi fogyást fedező mennyiséget.
 
 ## A környezet pontos felépítése
-A raktárban egy vektorban táruljuk a rendelt áru mennyiségét, ezzel szimulálva az időbeli eltolódást a boltok és a raktár között. A vektorba minden nap bekerül a raktár által rendelt mennyiség, valamint kiosztásra kerül a boltok között a négy nappal ezelőtt rendelt összes áru. A boltokban az árut szintén vektorokban tároljuk, ahol az indexek az áru korát (hány napja érkezett a boltba) jelzik.
+A raktárban egy vektorban táruljuk a rendelt áru mennyiségét, ezzel szimulálva az időbeli eltolódást a boltok és a raktár között. A vektorba minden nap bekerül a raktár által rendelt mennyiség, valamint kiosztásra kerül a boltok között a négy nappal ezelőtt rendelt összes áru. A boltokban az árut szintén vektorokban tároljuk, ahol az indexek az áru korát (hány napja érkezett a boltba) jelzik. A boltoknál állítható, mennyi idő után kerülnek kidobásra az áruk.
 
 
-## Tesztelés
-A tesztelés során a boltok eloszlásából húzunk az aznapi fogyasztásra, majd nap végén az adott bolt a másnapi várható fogyasztás értékére próbálja meg kiegészíteni saját árukészletét. Ezt a rendelést továbbíta a központi raktár felé, ahol ennek függvényében szétosztásra kerül a korábban az adott napra megrendelt összes áru. A raktár a nap végén rendel, az általa rendelt áru csak négy nap múlva kerül a boltokba kiszállításra. Az áruk kiosztására több módszer is lehetséges. Bővebben a [folyamat](#tesztelés-folyamata) ábrán lehet róla olvasni. 
+## Tanulás
+A tanulás során az ágenst a környezetben szabadjára engedjük, majd az az általa látott információkból (state-space) megpróbálja a lehető legjobb döntést (action) meghozni. A dontés minőségét egy jutalommal (reward) tudjuk kiértékelni.
 
-## Tesztelés folyamata
-Ábrazoljuk egy nap szimuláció lefolyását a modellben.
-![folyamat](resources/LIDL_flow.png)
+### State space
+Az ágens számára elérhető információ jelenleg:
+1. A következő 3 napra jósolt fogyás boltokra bontva
+2. A boltok aznapi raktárkészlete
+3. Az előző nap kidobásra került áru
 
-## Hiba 
-Hiba lehet többrétü. Mivel a boltokban és a raktárban is korok szerint tárolunk így mindekttőnél lehet hibaként kezelni a bennük maradt áru mennyiségét. Kor szerint lehet őket súlyozni is. Az olyan árut amit megvettek **volna** a való életben viszont nem lehet kezelni mert azt nem lehet tudni. Bizonyos kor után árukat kilehet dobni mert túl öregek. Az ilyet is lehet hibaként kezelni. Összeségében a kidobott áru mennyiségét kell minimalizálni különböző stratégiák mentén.
+### Action
+A modellnek ez alapján kell minél pontosabban megrendelnie a 4 nap múlva szükséges árut a boltok számára.
 
-## Predikció
-A raktár rendelésének optimalizálása a fő cél. A predikcióhoz szükséges bemenő paraméterek a boltok várható eloszlásai négy nap múlva, valamint a boltok adott pillanatbeli árukészletei és korábbi napok adatai is. A modell célje ezen inputok segítségével az optimális rendelendő mennyiség prediktálása.
+### Reward
+A jutalom fő részei:
+1. A boltokban kidobásra került áru (negatív)
+2. A boltokban lévő, régi áru (negatív)
+3. A boltokban a minimum mennyiségen felüli áru (pozitív)
 
-## További célok
-### Vásárlói szokások
-Jelen pillanatban a vásárlói szokások abban nyilvánulnak meg, hogy mindig a legfrissebb árut szeretnék megvásárolni, ám később szeretnénk beépíteni, hogy lehetőség legyen ettől eltérő szokásokkal való tesztelére is.
-### Lejárati idő
-Mivel a boltokban napra pontosan tároljuk, mikor érekezett a termék, így hozzá lehet rendelni minden termékhez egy dátumot, mely után az adott termék mát nem kerülhet eladásra. Ezen termékek számát természetesen a hiba számolásába is be kell építeni. Ugyanezt lehet alkalmazni a raktárra is.
+### A tanulás menete
+A tanulás célja, hogy megtalálja a megfelelő state-action párokat, azaz a jelen állapot szerint megrendelendő ideális árumennyiséget.
+Mivel azonban a tipikus [Q learning](https://en.wikipedia.org/wiki/Q-learning) számára az állapotot leító vektorunk túl nagy, ezért deep q learninget használunk, melyben az egész q tábla bejárása helyett egy neurális hálóval közelítjük az adott állapotban lehetséges actionok q értékeit. Ennek előnye, hogy egyáltalán nincs szükségünk q táblára, viszont a program tanulását, futási idejét jelentősen lassítja. A tanulás során a célunk, hogy a háló paramétereivel az optimális értékekhez konvergáljunk.
 
-## Lehetséges egyéb változtatások
-A mostani programban a központi raktár minden esetben kiosztja a nála lévő árut, így a boltok általában nem pontosan annyit kapnak, mint amennyit rendeltek. Ezzel ellentétben megvalósítható, hogy a "maradék", rendeléseken felüli áru nem kerül a boltokban kiszállításra, hanem a raktárban marad, és a következő rendelésekkor ez az áru is kiosztásra kerül. Ebben az esetben viszont fel kell állítani valamiféle fontossági sorrendet a boltok között, hogy melyik üzlet kapja a firssebb árut.
+#### Epsilon-greedy
+A lokális minimumok elkerülése végett egy olyan megoldást kell alkalmazni, mely arra "motiválja" az ágenst, hogy minél több action kipróbáljon. Ez úgy valósul meg, hogy egy epsilon értéktől függ, milyen gyakran választja az általa optimálisnak vélt actiont a modell, egyéb esetben pedig a többi, gyakran még ismeretlen kimenetű actiont fogja megvalósítani. Hogy a modell konvergálni tudjon, az epislon értékét a tanulás során folyamatosan csökkentjük. Természetesen ez a végleges modellnél már nincs jelen.
+
+#### Epizódok
+A tanulást megadott hosszú epizódokban folyik, melynek célja, hogy segítse a kapott adatok megértését, a modell jelen állapotának kiértékelését. Minden epizódban összesítődik a napok során szerzett reward, és az adott epizód végén a környezet is visszaállítódik a kezdeti állapotába. Így azonos körülményekkel indulva tesztelhetjük, hogyan változott a teljesítmény a korábbiakhoz képest.
+
+#### Predikciók
+A predikciók jelenleg az elkülönült Data classban vannak jelen. Minden bolthoz tartozik egy ilyen objektum, és jelenleg normál eloszlás szerint generál random adatot a boltok, és a raktár számára.
+
+### Tervek
+#### State tárolásának átdolgozása
+Mivel a reward és az action időben elkülönülnek, ezért lehet, javítana a tanulás minőségén, ha a state-action-reward elmentésekor nem az adott actionhoz tartozó rewardot mentenénk el, hanem azt, mely csak a megrendelt áru kidobásakor keletkezik.
+
+#### Soft-max
+Egy alternatív módszer, mely az epsilon-greedyt váltaná fel. Előnye, hogy jobban működik folytonos action space esetén, és nekünk jelen esetben pont ilyen van.
