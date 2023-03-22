@@ -98,3 +98,4 @@ class Store():
         self.record = np.reshape(self.record, (-1,6))
         self.history = np.append(self.history,self.record,axis=0)
         self.record = np.zeros(6)
+        self.forecast.update()
