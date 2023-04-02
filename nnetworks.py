@@ -51,9 +51,11 @@ class QNetwork(nn.Module):
         super(QNetwork,self).__init__()
         
         self.linear = nn.Sequential(
-            nn.Linear(state_size,state_size),
+            nn.Linear(state_size,2*state_size),
             nn.ReLU(),
-            nn.Linear(state_size,state_size),
+            nn.Linear(2*state_size,2*state_size),
+            nn.ReLU(),
+            nn.Linear(2*state_size,state_size),
             nn.ReLU(),
             nn.Linear(state_size,(state_size+action_size)//2),
             nn.ReLU(),

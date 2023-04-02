@@ -67,11 +67,17 @@ class Agent():
         rnd = np.random.random()
         q_values = self.Q_policy.forward(torch.Tensor(state).view(1,self.state_size)).to(self.Q_policy.device) # add batch dimension for the NN
 
+        #Use epsilon-greedy policy
         if rnd < 1 - self.epsilon or simulate:
             action = torch.argmax(q_values).item()
         else:
             action = np.random.choice(np.arange(self.action_size))
-        return action, q_values.cpu().detach().numpy()
+            
+        #return according to simulation or training
+        if simulate:
+            return action, q_values.cpu().detach().numpy()
+        else:
+            return action
         
     def save_model(self,name):
         if not os.path.exists('models'):
@@ -89,7 +95,6 @@ class Agent():
         # data from batch
         states = torch.Tensor(list(state_batch[:,0])).to(self.Q_policy.device)
         next_states = torch.Tensor(list(state_batch[:,3])).to(self.Q_policy.device)
-        # next_states = torch.Tensor(list(state_batch[:,0])).to(self.Q_policy.device)
         rewards = torch.Tensor(list(state_batch[:,2])).to(self.Q_policy.device)
 
         # pass through network in learning mode
@@ -101,7 +106,6 @@ class Agent():
         
         Q_targets = Q_values.clone()
         Q_targets[np.arange(self.batch_size),max_q_index] = rewards + self.gamma*torch.max(Q_next_values,dim=1)[0] # (BELLMANN-EQUATION)
-        # Q_targets[np.arange(self.batch_size),max_q_index] = rewards + self.gamma*torch.max(Q_next_values[1]) # (BELLMANN-EQUATION)
         
         loss = self.Q_policy.loss(Q_targets,Q_values).to(self.Q_policy.device)
         loss.backward()
@@ -109,10 +113,10 @@ class Agent():
         
         # network parameters update
         if self.step % self.target_update_rate == 0:
-            # print("Copy target network")
             self.Q_target.load_state_dict(self.Q_policy.state_dict())
         
         self.step += 1
+        return loss.cpu().detach().numpy()
 
 if __name__ == "__main__":
     # print(torch.rand(3,1,5))
