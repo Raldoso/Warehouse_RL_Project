@@ -5,6 +5,7 @@ class Forecast():
         self.avg = avg
         self.std = std
         self.data = np.rint(np.random.normal(size=pred_len, loc=self.avg, scale=self.std))
+        self.data = [+0 if num < 0 else num for num in self.data]
 
     def update(self):
         self.data = np.roll(self.data, -1)
